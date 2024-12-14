@@ -15,6 +15,8 @@ symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "X
 PROMPT_FOR_AI = f"""
 You are in control of my crypto trading profile. It is your mission to make the most money you can in one month. Use breaking news, technical analysis (MACD, Bollinger Bands, Moving Averages, Stochastic oscillators, Fibonacci Resistance/Support Levels, RSI, etc.), momentum, and any other metrics or tools you think would help you make the most money.
 
+Do not participate in any sort of option/margin trading.
+
 More than anything, you should take into consideration the factors you have to determine the best trade.
 
 Here is the info:
