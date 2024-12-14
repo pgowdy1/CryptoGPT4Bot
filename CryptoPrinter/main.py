@@ -10,7 +10,7 @@ import re
 openai.api_key = os.getenv("OPENAI_API_KEY")
 totp  = pyotp.TOTP(os.getenv("TOTP")).now()
 login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"), mfa_code=totp)
-symbols = ["BTC", "ETH", "BNB", "XRP", "ADA"]
+symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
 
 PROMPT_FOR_AI = f"""
 You are in control of my crypto trading profile. You should take into consideration the factors you have to determine the best trade. Here is the info:
@@ -37,7 +37,7 @@ The current date and time is {datetime.now().isoformat()}
 
 You are called once every 30 minutes, keep this in mind.
 
-The only cryptos you can trade are BTC, ETH, BNB, XRP and ADA.
+The only cryptos you can trade are BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ.
 """
 
 past_trades = []
@@ -262,4 +262,4 @@ def execute_response(response):
 
 while True:
     execute_response(get_trade_advice())
-    time.sleep(1800)
+    time.sleep(900)
