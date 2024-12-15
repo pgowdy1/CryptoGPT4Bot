@@ -365,7 +365,7 @@ CRITICAL: RESPOND IN ONLY THE ABOVE FORMAT. EXAMPLE: buy_crypto_price("BTC", 30)
 
     # Feed the prompt to the AI using new client format
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # or your preferred model
+        model="gpt-4o",  # or your preferred model
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_prompt}
