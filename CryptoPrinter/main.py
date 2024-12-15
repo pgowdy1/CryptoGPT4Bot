@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import robin_stocks.robinhood as rh
 import pyotp
 import openai
@@ -7,15 +10,19 @@ import time
 import requests
 import re
 import logging
+import pandas as pd
+import pandas_ta as ta
 
 from mock_portfolio import MockPortfolio
+from openai import OpenAI
 
 # Create a global mock portfolio instance
 mock_portfolio = MockPortfolio()
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-totp  = pyotp.TOTP(os.getenv("TOTP")).now()
-login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"), mfa_code=totp)
+client = OpenAI()  # This will automatically use your OPENAI_API_KEY from environment variables
+
+print(f"Email being used: {os.getenv('ROBINHOOD_EMAIL')}    Password being used: {os.getenv('ROBINHOOD_PASSWORD')}")
+login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"))
 symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
 
 PROMPT_FOR_AI = f"""
@@ -73,6 +80,18 @@ News Headlines (top 3 for each cryptocurrency, include sentiment analysis if pos
 The current date and time is {datetime.now().isoformat()}.
 
 Your Objective: Make intelligent, data-driven decisions to maximize returns while protecting the account from excessive risk. Always prioritize profits and avoid overtrading.
+
+Technical Indicators Guide:
+- RSI: Values over 70 indicate overbought, under 30 indicate oversold
+- MACD: Positive values indicate upward momentum, negative values indicate downward momentum
+- Bollinger Bands: Price above upper band indicates overbought, below lower band indicates oversold
+- Moving Averages: SMA_20 crossing above SMA_50 is bullish, crossing below is bearish
+
+Consider these technical indicators in your decision making process. Look for:
+- RSI divergence with price
+- MACD crossovers
+- Price touching or breaking Bollinger Bands
+- Moving average crossovers
 """
 
 past_trades = []
@@ -235,29 +254,61 @@ def cancel_order(orderId):
     rh.cancel_crypto_order(orderId)
 
 def get_historical_data():
-    # Define the start and end times
-    end_time = datetime.now()
-    start_time = end_time - timedelta(days=7)
-
     historicals = {}
 
     for symbol in symbols:
         # Fetch the historical data
         data = rh.crypto.get_crypto_historicals(symbol,
-                                                interval='10minute',
-                                                bounds='24_7',
-                                                span="hour")
+                                              interval='10minute',
+                                              bounds='24_7',
+                                              span="hour")
+        
+        # Convert to pandas DataFrame
+        df = pd.DataFrame(data)
+        df['close_price'] = df['close_price'].astype(float)
+        df['high_price'] = df['high_price'].astype(float)
+        df['low_price'] = df['low_price'].astype(float)
+        df['volume'] = df['volume'].astype(float)
 
-        # Filter out unnecessary information
+        # Calculate technical indicators
+        # RSI (Relative Strength Index)
+        df['RSI'] = ta.rsi(df['close_price'], length=14)
+        
+        # MACD (Moving Average Convergence Divergence)
+        macd = ta.macd(df['close_price'])
+        df['MACD'] = macd['MACD_12_26_9']
+        df['MACD_Signal'] = macd['MACDs_12_26_9']
+        
+        # Bollinger Bands
+        bollinger = ta.bbands(df['close_price'])
+        df['BB_upper'] = bollinger['BBU_20_2.0']
+        df['BB_middle'] = bollinger['BBM_20_2.0']
+        df['BB_lower'] = bollinger['BBL_20_2.0']
+        
+        # Simple Moving Averages
+        df['SMA_20'] = ta.sma(df['close_price'], length=20)
+        df['SMA_50'] = ta.sma(df['close_price'], length=50)
+
+        # Convert back to dictionary format
         useful_data = []
-        for entry in data:
+        for index, row in df.iterrows():
             useful_entry = {
-                'begins_at': entry['begins_at'],
-                'open_price': entry['open_price'],
-                'close_price': entry['close_price'],
-                'high_price': entry['high_price'],
-                'low_price': entry['low_price'],
-                'volume': entry['volume'],
+                'begins_at': row['begins_at'],
+                'open_price': row['open_price'],
+                'close_price': row['close_price'],
+                'high_price': row['high_price'],
+                'low_price': row['low_price'],
+                'volume': row['volume'],
+                'technical_indicators': {
+                    'RSI': None if pd.isna(row['RSI']) else float(row['RSI']),
+                    'MACD': None if pd.isna(row['MACD']) else float(row['MACD']),
+                    'MACD_Signal': None if pd.isna(row['MACD_Signal']) else float(row['MACD_Signal']),
+                    'BB_upper': None if pd.isna(row['BB_upper']) else float(row['BB_upper']),
+                    'BB_middle': None if pd.isna(row['BB_middle']) else float(row['BB_middle']),
+                    'BB_lower': None if pd.isna(row['BB_lower']) else float(row['BB_lower']),
+                    'SMA_20': None if pd.isna(row['SMA_20']) else float(row['SMA_20']),
+                    'SMA_50': None if pd.isna(row['SMA_50']) else float(row['SMA_50'])
+                }
             }
             useful_data.append(useful_entry)
         
@@ -312,16 +363,17 @@ do_nothing() Use this when you don't see any necessary changes.
 CRITICAL: RESPOND IN ONLY THE ABOVE FORMAT. EXAMPLE: buy_crypto_price("BTC", 30). ONLY RESPOND WITH ONE COMMAND.
     """
 
-    # Feed the prompt to the AI
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
+    # Feed the prompt to the AI using new client format
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # or your preferred model
         messages=[
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_prompt}
         ],
-        temperature = 0.2,
+        temperature=0.2,
     )
-    res = response.choices[0].message["content"]
+    
+    res = response.choices[0].message.content
     res = res.replace("\\", "")
     return res
 
