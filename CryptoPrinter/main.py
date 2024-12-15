@@ -6,14 +6,23 @@ from datetime import datetime, timedelta
 import time
 import requests
 import re
+import logging
+
+from mock_portfolio import MockPortfolio
+
+# Create a global mock portfolio instance
+mock_portfolio = MockPortfolio()
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-# totp  = pyotp.TOTP(os.getenv("TOTP")).now()
+totp  = pyotp.TOTP(os.getenv("TOTP")).now()
 login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"), mfa_code=totp)
 symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
 
 PROMPT_FOR_AI = f"""
-You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. You have access to real-time market data, technical indicators, and news.
+You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. 
+
+Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
+You have access to real-time market data, technical indicators, and news.
 
 Key Rules and Considerations
 
@@ -68,6 +77,14 @@ Your Objective: Make intelligent, data-driven decisions to maximize returns whil
 
 past_trades = []
 
+logging.basicConfig(
+    filename='trading_log.txt',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s'
+)
+
+TRADE_INTERVAL = int(os.getenv("TRADE_INTERVAL", "900"))  # default 15 minutes
+
 def record_trade(action, symbol, amount, summary, limit=None):
     trade_info = {
         "action": action,
@@ -103,29 +120,90 @@ def get_balance():
 
 def buy_crypto_price(symbol, amount, summary):
     amount = float(amount)
-    res = rh.order_buy_crypto_by_price(symbol, amount)
-    record_trade("buy_crypto_price", symbol, amount, summary)
-    print(res)
+    if amount > mock_portfolio.balance:
+        print(f"Insufficient funds: Tried to buy ${amount} but only have ${mock_portfolio.balance}")
+        return
+    
+    quote = rh.get_crypto_quote(symbol)
+    price = float(quote['ask_price'])
+    quantity = amount / price
+    
+    if symbol not in mock_portfolio.positions:
+        mock_portfolio.positions[symbol] = {'quantity': 0, 'average_price': 0}
+    
+    # Update position with new purchase
+    current_position = mock_portfolio.positions[symbol]
+    total_quantity = current_position['quantity'] + quantity
+    total_cost = (current_position['quantity'] * current_position['average_price']) + amount
+    new_average_price = total_cost / total_quantity
+    
+    mock_portfolio.positions[symbol]['quantity'] = total_quantity
+    mock_portfolio.positions[symbol]['average_price'] = new_average_price
+    mock_portfolio.balance -= amount
+    
+    mock_portfolio.record_trade('buy', symbol, amount, price, summary)
+    mock_portfolio.print_portfolio_status()
 
 def buy_crypto_limit(symbol, amount, summary, limit):
+    # For simulation purposes, we'll just treat limit orders as immediate if the current price is below the limit
     amount = float(amount)
     limit = float(limit)
-    res = rh.order_buy_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("buy_crypto_limit", symbol, amount, summary, limit)
-    print(res)
+    quote = rh.get_crypto_quote(symbol)
+    current_price = float(quote['ask_price'])
+    
+    if current_price <= limit:
+        buy_crypto_price(symbol, amount, f"{summary} (Limit order executed at {current_price})")
+    else:
+        print(f"Limit order placed: Buy ${amount} of {symbol} at {limit}")
+        mock_portfolio.open_orders.append({
+            'type': 'buy_limit',
+            'symbol': symbol,
+            'amount': amount,
+            'limit': limit,
+            'summary': summary
+        })
 
 def sell_crypto_price(symbol, amount, summary):
     amount = float(amount)
-    res = rh.order_sell_crypto_by_price(symbol, amount)
-    record_trade("sell_crypto_price", symbol, amount, summary)
-    print(res)
+    if symbol not in mock_portfolio.positions:
+        print(f"No position in {symbol} to sell")
+        return
+    
+    quote = rh.get_crypto_quote(symbol)
+    price = float(quote['bid_price'])
+    quantity = amount / price
+    
+    if quantity > mock_portfolio.positions[symbol]['quantity']:
+        print(f"Insufficient {symbol} to sell")
+        return
+    
+    mock_portfolio.positions[symbol]['quantity'] -= quantity
+    mock_portfolio.balance += amount
+    
+    if mock_portfolio.positions[symbol]['quantity'] == 0:
+        del mock_portfolio.positions[symbol]
+    
+    mock_portfolio.record_trade('sell', symbol, amount, price, summary)
+    mock_portfolio.print_portfolio_status()
 
 def sell_crypto_limit(symbol, amount, summary, limit):
+    # Similar to buy_limit
     amount = float(amount)
     limit = float(limit)
-    res = rh.order_sell_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("sell_crypto_limit", symbol, amount, summary, limit)
-    print(res)
+    quote = rh.get_crypto_quote(symbol)
+    current_price = float(quote['bid_price'])
+    
+    if current_price >= limit:
+        sell_crypto_price(symbol, amount, f"{summary} (Limit order executed at {current_price})")
+    else:
+        print(f"Limit order placed: Sell ${amount} of {symbol} at {limit}")
+        mock_portfolio.open_orders.append({
+            'type': 'sell_limit',
+            'symbol': symbol,
+            'amount': amount,
+            'limit': limit,
+            'summary': summary
+        })
 
 def get_open_orders():
     positions_data = rh.get_all_open_crypto_orders()
@@ -143,27 +221,15 @@ def get_open_orders():
     return useful_infos
 
 def get_positions():
-    positions_data = rh.crypto.get_crypto_positions()
-
-    useful_infos = []
-    for position in positions_data:
-        if float(position['quantity']) > 0:  # we only want open positions with a quantity greater than 0
-            currency_code = position['currency']['code']
-            # Fetch current price for this cryptocurrency
-            current_price_data = rh.crypto.get_crypto_quote(currency_code)
-            current_price = float(current_price_data['mark_price'])
-            # Convert quantity to dollar amount
-            quantity = float(position['quantity'])
-            dollar_amount = quantity * current_price
-
-            useful_info = {
-                'symbol': currency_code,
-                'quantity': quantity,
-                'dollar_amount': dollar_amount,
-            }
-            useful_infos.append(useful_info)
-    print(useful_infos)
-    return useful_infos
+    positions = []
+    for symbol, position in mock_portfolio.positions.items():
+        current_price = float(rh.get_crypto_quote(symbol)['mark_price'])
+        positions.append({
+            'symbol': symbol,
+            'quantity': position['quantity'],
+            'dollar_amount': position['quantity'] * current_price,
+        })
+    return positions
 
 def cancel_order(orderId):
     rh.cancel_crypto_order(orderId)
@@ -287,6 +353,18 @@ def execute_response(response):
         time.sleep(10)
         execute_response(get_trade_advice())
 
+def print_performance_report():
+    print("\n=== Performance Report ===")
+    print(f"Initial Balance: $10,000.00")
+    print(f"Current Portfolio Value: ${mock_portfolio.get_portfolio_value():.2f}")
+    print(f"Total Return: ${(mock_portfolio.get_portfolio_value() - 10000):.2f}")
+    print(f"Return Percentage: {((mock_portfolio.get_portfolio_value() - 10000) / 10000 * 100):.2f}%")
+    print("Recent Trades:")
+    for trade in mock_portfolio.trade_history[-5:]:  # Show last 5 trades
+        print(f"{trade['time']}: {trade['type']} {trade['symbol']} ${trade['amount']} @ ${trade['price']}")
+    print("========================\n")
+
 while True:
     execute_response(get_trade_advice())
-    time.sleep(900)
+    print_performance_report()
+    time.sleep(TRADE_INTERVAL)
