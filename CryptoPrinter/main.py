@@ -338,18 +338,75 @@ def get_all_crypto_news():
 
     return all_news
 
+def get_order_book_depth(symbol):
+    try:
+        # Get order book data from Robinhood
+        order_book = rh.get_crypto_quote_from_id(symbol, info=None)
+        
+        # Process ask orders (sell orders)
+        ask_orders = {
+            'prices': [],
+            'quantities': [],
+            'total_value': 0
+        }
+        
+        # Process bid orders (buy orders)
+        bid_orders = {
+            'prices': [],
+            'quantities': [],
+            'total_value': 0
+        }
+        
+        # Calculate important metrics
+        return {
+            'symbol': symbol,
+            'bid_ask_spread': float(order_book['ask_price']) - float(order_book['bid_price']),
+            'buy_pressure': sum(bid_orders['total_value']),
+            'sell_pressure': sum(ask_orders['total_value']),
+            'largest_buy_wall': max(bid_orders['quantities']) if bid_orders['quantities'] else 0,
+            'largest_sell_wall': max(ask_orders['quantities']) if ask_orders['quantities'] else 0,
+            'order_imbalance': (sum(bid_orders['total_value']) - sum(ask_orders['total_value']))
+        }
+    except Exception as e:
+        print(f"Error getting order book for {symbol}: {str(e)}")
+        return None
+
+def get_all_order_books():
+    order_books = {}
+    for symbol in symbols:
+        order_books[symbol] = get_order_book_depth(symbol)
+    return order_books
+
 def get_trade_advice():
-    # Get all the necessary information
     crypto_info = get_crypto_infos()
     balance = get_balance()
     positions = get_positions()
     news = get_all_crypto_news()
     open_orders = get_open_orders()
+    order_books = get_all_order_books()
     past_trade_info = '\n'.join([str(trade) for trade in past_trades])
 
-    # Convert the info into a format suitable for the AI prompt
-    info_str = f"Crypto Info: {crypto_info}\nBalance: {balance}\nPositions: {positions}\nNews: {news}\nOpen Orders: {open_orders}\nPast Trades: {past_trade_info}"
-    prompt = PROMPT_FOR_AI + "\n\n" + info_str
+    # Add order book info to the prompt
+    info_str = f"""
+Crypto Info: {crypto_info}
+Balance: {balance}
+Positions: {positions}
+News: {news}
+Open Orders: {open_orders}
+Order Books: {order_books}
+Past Trades: {past_trade_info}
+"""
+
+    # Add order book interpretation to the prompt
+    order_book_guide = """
+Order Book Analysis Guide:
+- Bid-Ask Spread: Wider spreads indicate less liquidity
+- Buy/Sell Pressure: Higher values indicate stronger directional pressure
+- Order Imbalance: Positive values suggest more buying pressure, negative more selling pressure
+- Large Walls: Significant resistance or support levels
+"""
+    
+    prompt = PROMPT_FOR_AI + order_book_guide + "\n\n" + info_str
     user_prompt = """
 What should we do to make the most amount of profit based on the info?
 
