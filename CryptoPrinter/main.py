@@ -27,6 +27,7 @@ You are an advanced trading AI designed to maximize profits while minimizing ris
 
 Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
 You have access to real-time market data, technical indicators, and news.
+For now, you will be using a mock portfolio that started with $10,000. In the future, you will be using a real portfolio.
 
 Key Rules and Considerations
 
@@ -114,106 +115,57 @@ def get_crypto_infos():
     return infos
 
 def get_balance():
-    balance = exchange.fetch_balance()
-    return float(balance['total']['USD'])
+    return mock_portfolio.get_balance()
 
 def buy_crypto_price(symbol, amount, summary):
     amount = float(amount)
     try:
-        order = exchange.create_market_buy_order(
-            f'{symbol}/USD',
-            amount,
-            {'trading_agreement': 'agree'}
-        )
+        ticker = exchange.fetch_ticker(f'{symbol}/USD')  # Still get real price data
+        order = mock_portfolio.create_market_buy_order(symbol, amount, ticker['ask'])
         record_trade("buy_crypto_price", symbol, amount, summary)
         print(order)
     except Exception as e:
         print(f"Error buying {symbol}: {e}")
 
-def buy_crypto_limit(symbol, amount, summary, limit):
-    amount = float(amount)
-    limit = float(limit)
-    try:
-        order = exchange.create_limit_buy_order(
-            f'{symbol}/USD',
-            amount,
-            limit,
-            {'trading_agreement': 'agree'}
-        )
-        record_trade("buy_crypto_limit", symbol, amount, summary, limit)
-        print(order)
-    except Exception as e:
-        print(f"Error placing limit buy for {symbol}: {e}")
-
 def sell_crypto_price(symbol, amount, summary):
     amount = float(amount)
     try:
-        order = exchange.create_market_sell_order(
-            f'{symbol}/USD',
-            amount,
-            {'trading_agreement': 'agree'}
-        )
+        ticker = exchange.fetch_ticker(f'{symbol}/USD')  # Still get real price data
+        order = mock_portfolio.create_market_sell_order(symbol, amount, ticker['bid'])
         record_trade("sell_crypto_price", symbol, amount, summary)
         print(order)
     except Exception as e:
         print(f"Error selling {symbol}: {e}")
 
+def buy_crypto_limit(symbol, amount, summary, limit):
+    amount = float(amount)
+    limit = float(limit)
+    try:
+        order = mock_portfolio.create_limit_buy_order(symbol, amount, limit)
+        record_trade("buy_crypto_limit", symbol, amount, summary, limit)
+        print(order)
+    except Exception as e:
+        print(f"Error placing limit buy for {symbol}: {e}")
+
 def sell_crypto_limit(symbol, amount, summary, limit):
     amount = float(amount)
     limit = float(limit)
     try:
-        order = exchange.create_limit_sell_order(
-            f'{symbol}/USD',
-            amount,
-            limit,
-            {'trading_agreement': 'agree'}
-        )
+        order = mock_portfolio.create_limit_sell_order(symbol, amount, limit)
         record_trade("sell_crypto_limit", symbol, amount, summary, limit)
         print(order)
     except Exception as e:
         print(f"Error placing limit sell for {symbol}: {e}")
 
-def get_open_orders():
-    try:
-        orders = exchange.fetch_open_orders()
-        useful_infos = []
-        for order in orders:
-            useful_info = {
-                'id': order['id'],
-                'type': order['type'],
-                'side': order['side'],
-                'quantity': order['amount'],
-                'price': order['price']
-            }
-            useful_infos.append(useful_info)
-        return useful_infos
-    except Exception as e:
-        print(f"Error fetching open orders: {e}")
-        return []
-
 def get_positions():
-    try:
-        balance = exchange.fetch_balance()
-        useful_infos = []
-        for symbol in symbols:
-            if symbol in balance and balance[symbol]['total'] > 0:
-                ticker = exchange.fetch_ticker(f'{symbol}/USD')
-                quantity = balance[symbol]['total']
-                dollar_amount = quantity * ticker['last']
-                useful_info = {
-                    'symbol': symbol,
-                    'quantity': quantity,
-                    'dollar_amount': dollar_amount,
-                }
-                useful_infos.append(useful_info)
-        return useful_infos
-    except Exception as e:
-        print(f"Error fetching positions: {e}")
-        return []
+    return mock_portfolio.get_positions()
+
+def get_open_orders():
+    return mock_portfolio.get_open_orders()
 
 def cancel_order(orderId):
     try:
-        exchange.cancel_order(orderId)
+        mock_portfolio.cancel_order(orderId)
     except Exception as e:
         print(f"Error canceling order {orderId}: {e}")
 
