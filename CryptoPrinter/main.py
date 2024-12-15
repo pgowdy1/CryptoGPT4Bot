@@ -8,7 +8,7 @@ import requests
 import re
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-totp  = pyotp.TOTP(os.getenv("TOTP")).now()
+# totp  = pyotp.TOTP(os.getenv("TOTP")).now()
 login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"), mfa_code=totp)
 symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
 
@@ -19,9 +19,9 @@ Key Rules and Considerations
 
 Risk Management:
 
-Never risk more than 5% of the total account balance on any single trade.
+Never risk more than 15% of the total account balance on any single trade.
 Maintain a cash reserve of at least 20% of the total balance to capitalize on sudden opportunities.
-Use stop-losses to limit losses on any trade to 2% of the total account balance.
+Use stop-losses to limit losses on any trade to 3% of the total account balance.
 
 Trading Strategies:
 
@@ -32,7 +32,6 @@ Trade only when there is a high-confidence setup based on a combination of techn
 Market Conditions:
 
 Adapt strategies based on market trends (bullish, bearish, or sideways).
-In volatile conditions, reduce position sizes and prioritize safer trades.
 
 Decision Frequency:
 
@@ -41,17 +40,17 @@ Avoid overtrading; do not execute more than 5 trades per hour unless there is an
 
 Execution Options:
 
-buy_crypto_price(symbol, amount): Buy cryptocurrency for a specified dollar amount.
-buy_crypto_limit(symbol, amount, limit): Set a limit order to buy at a specific price.
-sell_crypto_price(symbol, amount): Sell cryptocurrency for a specified dollar amount.
-sell_crypto_limit(symbol, amount, limit): Set a limit order to sell at a specific price.
+buy_crypto_price(symbol, amount, summary): Buy cryptocurrency for a specified dollar amount.
+buy_crypto_limit(symbol, amount, summary, limit): Set a limit order to buy at a specific price.
+sell_crypto_price(symbol, amount, summary): Sell cryptocurrency for a specified dollar amount.
+sell_crypto_limit(symbol, amount, summary, limit): Set a limit order to sell at a specific price.
 cancel_order(orderId): Cancel an open order.
 do_nothing(): Use when there are no clear opportunities.
 
 Critical:
 
 Base every decision on data provided (crypto info, balance, positions, historical data, news, open orders).
-Provide only one command per response in the exact format: command("symbol", amount, [optional limit]).
+Provide only one command per response in the exact format: command("symbol", amount, summary, [optional limit]). The summary parameter is a 2-4 sentence explanation of the logic you're using on why you are making the trade.
 
 Provided Data:
 
@@ -69,11 +68,12 @@ Your Objective: Make intelligent, data-driven decisions to maximize returns whil
 
 past_trades = []
 
-def record_trade(action, symbol, amount, limit=None):
+def record_trade(action, symbol, amount, summary, limit=None):
     trade_info = {
         "action": action,
         "symbol": symbol,
         "amount": amount,
+        "descriptionOfWhyTradeMade": summary,
         "time": datetime.now().isoformat(),
     }
     if limit is not None:
@@ -101,30 +101,30 @@ def get_balance():
     profile = rh.profiles.load_account_profile()
     return float(profile["buying_power"])-1  # returns total account equity minus one for fees
 
-def buy_crypto_price(symbol, amount):
+def buy_crypto_price(symbol, amount, summary):
     amount = float(amount)
     res = rh.order_buy_crypto_by_price(symbol, amount)
-    record_trade("buy_crypto_price", symbol, amount)
+    record_trade("buy_crypto_price", symbol, amount, summary)
     print(res)
 
-def buy_crypto_limit(symbol, amount, limit):
+def buy_crypto_limit(symbol, amount, summary, limit):
     amount = float(amount)
     limit = float(limit)
     res = rh.order_buy_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("buy_crypto_limit", symbol, amount, limit)
+    record_trade("buy_crypto_limit", symbol, amount, summary, limit)
     print(res)
 
-def sell_crypto_price(symbol, amount):
+def sell_crypto_price(symbol, amount, summary):
     amount = float(amount)
     res = rh.order_sell_crypto_by_price(symbol, amount)
-    record_trade("sell_crypto_price", symbol, amount)
+    record_trade("sell_crypto_price", symbol, amount, summary)
     print(res)
 
-def sell_crypto_limit(symbol, amount, limit):
+def sell_crypto_limit(symbol, amount, summary, limit):
     amount = float(amount)
     limit = float(limit)
     res = rh.order_sell_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("sell_crypto_limit", symbol, amount, limit)
+    record_trade("sell_crypto_limit", symbol, amount, summary, limit)
     print(res)
 
 def get_open_orders():
