@@ -1,5 +1,4 @@
-import robin_stocks.robinhood as rh
-import pyotp
+import ccxt
 import openai
 import os
 from datetime import datetime, timedelta
@@ -7,13 +6,27 @@ import time
 import requests
 import re
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
-# totp  = pyotp.TOTP(os.getenv("TOTP")).now()
-login = rh.login(os.getenv("ROBINHOOD_EMAIL"), os.getenv("ROBINHOOD_PASSWORD"), mfa_code=totp)
-symbols = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
+from mock_portfolio import MockPortfolio
+from openai import OpenAI
+
+# Initialize CCXT Kraken exchange
+exchange = ccxt.kraken({
+    'apiKey': os.getenv('KRAKEN_API_KEY'),
+    'secret': os.getenv('KRAKEN_API_SECRET'),
+})
+
+# Create a global mock portfolio instance
+mock_portfolio = MockPortfolio()
+
+client = OpenAI()  # This will automatically use your OPENAI_API_KEY from environment variables
+
+symbols = ["BTC", "ETH", "XRP", "SOL", "ADA", "AVAX", "LINK"]
 
 PROMPT_FOR_AI = f"""
-You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. You have access to real-time market data, technical indicators, and news.
+You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. 
+
+Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
+You have access to real-time market data, technical indicators, and news.
 
 Key Rules and Considerations
 
@@ -85,118 +98,153 @@ def record_trade(action, symbol, amount, summary, limit=None):
 def get_crypto_infos():
     infos = {}
     for symbol in symbols:
-        quote = rh.get_crypto_quote(symbol)
-        useful_info = {
-            'symbol': quote['symbol'],
-            'ask_price': quote['ask_price'],
-            'bid_price': quote['bid_price'],
-            'high_price': quote['high_price'],
-            'low_price': quote['low_price'],
-            'volume': quote['volume']
-        }
-        infos[symbol] = useful_info
+        try:
+            ticker = exchange.fetch_ticker(f'{symbol}/USD')
+            useful_info = {
+                'symbol': symbol,
+                'ask_price': ticker['ask'],
+                'bid_price': ticker['bid'],
+                'high_price': ticker['high'],
+                'low_price': ticker['low'],
+                'volume': ticker['baseVolume']
+            }
+            infos[symbol] = useful_info
+        except Exception as e:
+            print(f"Error fetching info for {symbol}: {e}")
     return infos
 
 def get_balance():
-    profile = rh.profiles.load_account_profile()
-    return float(profile["buying_power"])-1  # returns total account equity minus one for fees
+    balance = exchange.fetch_balance()
+    return float(balance['total']['USD'])
 
 def buy_crypto_price(symbol, amount, summary):
     amount = float(amount)
-    res = rh.order_buy_crypto_by_price(symbol, amount)
-    record_trade("buy_crypto_price", symbol, amount, summary)
-    print(res)
+    try:
+        order = exchange.create_market_buy_order(
+            f'{symbol}/USD',
+            amount,
+            {'trading_agreement': 'agree'}
+        )
+        record_trade("buy_crypto_price", symbol, amount, summary)
+        print(order)
+    except Exception as e:
+        print(f"Error buying {symbol}: {e}")
 
 def buy_crypto_limit(symbol, amount, summary, limit):
     amount = float(amount)
     limit = float(limit)
-    res = rh.order_buy_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("buy_crypto_limit", symbol, amount, summary, limit)
-    print(res)
+    try:
+        order = exchange.create_limit_buy_order(
+            f'{symbol}/USD',
+            amount,
+            limit,
+            {'trading_agreement': 'agree'}
+        )
+        record_trade("buy_crypto_limit", symbol, amount, summary, limit)
+        print(order)
+    except Exception as e:
+        print(f"Error placing limit buy for {symbol}: {e}")
 
 def sell_crypto_price(symbol, amount, summary):
     amount = float(amount)
-    res = rh.order_sell_crypto_by_price(symbol, amount)
-    record_trade("sell_crypto_price", symbol, amount, summary)
-    print(res)
+    try:
+        order = exchange.create_market_sell_order(
+            f'{symbol}/USD',
+            amount,
+            {'trading_agreement': 'agree'}
+        )
+        record_trade("sell_crypto_price", symbol, amount, summary)
+        print(order)
+    except Exception as e:
+        print(f"Error selling {symbol}: {e}")
 
 def sell_crypto_limit(symbol, amount, summary, limit):
     amount = float(amount)
     limit = float(limit)
-    res = rh.order_sell_crypto_limit_by_price(symbol, amount, limit)
-    record_trade("sell_crypto_limit", symbol, amount, summary, limit)
-    print(res)
+    try:
+        order = exchange.create_limit_sell_order(
+            f'{symbol}/USD',
+            amount,
+            limit,
+            {'trading_agreement': 'agree'}
+        )
+        record_trade("sell_crypto_limit", symbol, amount, summary, limit)
+        print(order)
+    except Exception as e:
+        print(f"Error placing limit sell for {symbol}: {e}")
 
 def get_open_orders():
-    positions_data = rh.get_all_open_crypto_orders()
-    
-    useful_infos = []
-    for position in positions_data:
-        useful_info = {
-            'id': position['id'],
-            'type': position['type'],
-            'side': position['side'],
-            'quantity': position['quantity'],
-            'price': position['price']
-        }
-        useful_infos.append(useful_info)
-    return useful_infos
-
-def get_positions():
-    positions_data = rh.crypto.get_crypto_positions()
-
-    useful_infos = []
-    for position in positions_data:
-        if float(position['quantity']) > 0:  # we only want open positions with a quantity greater than 0
-            currency_code = position['currency']['code']
-            # Fetch current price for this cryptocurrency
-            current_price_data = rh.crypto.get_crypto_quote(currency_code)
-            current_price = float(current_price_data['mark_price'])
-            # Convert quantity to dollar amount
-            quantity = float(position['quantity'])
-            dollar_amount = quantity * current_price
-
+    try:
+        orders = exchange.fetch_open_orders()
+        useful_infos = []
+        for order in orders:
             useful_info = {
-                'symbol': currency_code,
-                'quantity': quantity,
-                'dollar_amount': dollar_amount,
+                'id': order['id'],
+                'type': order['type'],
+                'side': order['side'],
+                'quantity': order['amount'],
+                'price': order['price']
             }
             useful_infos.append(useful_info)
-    print(useful_infos)
-    return useful_infos
+        return useful_infos
+    except Exception as e:
+        print(f"Error fetching open orders: {e}")
+        return []
+
+def get_positions():
+    try:
+        balance = exchange.fetch_balance()
+        useful_infos = []
+        for symbol in symbols:
+            if symbol in balance and balance[symbol]['total'] > 0:
+                ticker = exchange.fetch_ticker(f'{symbol}/USD')
+                quantity = balance[symbol]['total']
+                dollar_amount = quantity * ticker['last']
+                useful_info = {
+                    'symbol': symbol,
+                    'quantity': quantity,
+                    'dollar_amount': dollar_amount,
+                }
+                useful_infos.append(useful_info)
+        return useful_infos
+    except Exception as e:
+        print(f"Error fetching positions: {e}")
+        return []
 
 def cancel_order(orderId):
-    rh.cancel_crypto_order(orderId)
+    try:
+        exchange.cancel_order(orderId)
+    except Exception as e:
+        print(f"Error canceling order {orderId}: {e}")
 
 def get_historical_data():
-    # Define the start and end times
-    end_time = datetime.now()
-    start_time = end_time - timedelta(days=7)
-
     historicals = {}
+    end_time = exchange.milliseconds()
+    start_time = end_time - (7 * 24 * 60 * 60 * 1000)  # 7 days ago
 
     for symbol in symbols:
-        # Fetch the historical data
-        data = rh.crypto.get_crypto_historicals(symbol,
-                                                interval='10minute',
-                                                bounds='24_7',
-                                                span="hour")
-
-        # Filter out unnecessary information
-        useful_data = []
-        for entry in data:
-            useful_entry = {
-                'begins_at': entry['begins_at'],
-                'open_price': entry['open_price'],
-                'close_price': entry['close_price'],
-                'high_price': entry['high_price'],
-                'low_price': entry['low_price'],
-                'volume': entry['volume'],
-            }
-            useful_data.append(useful_entry)
-        
-        historicals[symbol] = useful_data
-
+        try:
+            ohlcv = exchange.fetch_ohlcv(
+                f'{symbol}/USD',
+                '10m',
+                since=start_time,
+                limit=1000
+            )
+            useful_data = []
+            for candle in ohlcv:
+                useful_entry = {
+                    'begins_at': exchange.iso8601(candle[0]),
+                    'open_price': candle[1],
+                    'high_price': candle[2],
+                    'low_price': candle[3],
+                    'close_price': candle[4],
+                    'volume': candle[5],
+                }
+                useful_data.append(useful_entry)
+            historicals[symbol] = useful_data
+        except Exception as e:
+            print(f"Error fetching historical data for {symbol}: {e}")
+    
     return historicals
 
 def get_all_crypto_news():
@@ -234,7 +282,7 @@ def get_trade_advice():
     info_str = f"Crypto Info: {crypto_info}\nBalance: {balance}\nPositions: {positions}\nNews: {news}\nOpen Orders: {open_orders}\nPast Trades: {past_trade_info}"
     prompt = PROMPT_FOR_AI + "\n\n" + info_str
     user_prompt = """
-What should we do to make the most amount of profit based on the info?
+What should we do to make the most amount of profit based on the info provided?
 
 buy_crypto_price(symbol, amount) This will buy the specified dollars of the specified cryptocurrency.
 buy_crypto_limit(symbol, amount, limit) This will set a limit order to buy the specified dollars of the specified cryptocurrency if it reaches the specified limit.
