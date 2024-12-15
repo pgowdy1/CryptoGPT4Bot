@@ -8,12 +8,27 @@ import re
 
 from mock_portfolio import MockPortfolio
 from openai import OpenAI
+from technical_analysis import TechnicalAnalysis
+
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('trading_bot.log'),
+        logging.StreamHandler()
+    ]
+)
 
 # Initialize CCXT Kraken exchange
 exchange = ccxt.kraken({
     'apiKey': os.getenv('KRAKEN_API_KEY'),
     'secret': os.getenv('KRAKEN_API_SECRET'),
 })
+
+# After initializing the exchange, create the technical analysis instance
+technical_analyzer = TechnicalAnalysis(exchange)
 
 # Create a global mock portfolio instance
 mock_portfolio = MockPortfolio()
@@ -229,9 +244,21 @@ def get_trade_advice():
     news = get_all_crypto_news()
     open_orders = get_open_orders()
     past_trade_info = '\n'.join([str(trade) for trade in past_trades])
+    
+    # Get technical indicators for each symbol
+    technical_analysis = technical_analyzer.get_all_indicators(symbols)
 
     # Convert the info into a format suitable for the AI prompt
-    info_str = f"Crypto Info: {crypto_info}\nBalance: {balance}\nPositions: {positions}\nNews: {news}\nOpen Orders: {open_orders}\nPast Trades: {past_trade_info}"
+    info_str = (
+        f"Crypto Info: {crypto_info}\n"
+        f"Technical Analysis: {technical_analysis}\n"
+        f"Balance: {balance}\n"
+        f"Positions: {positions}\n"
+        f"News: {news}\n"
+        f"Open Orders: {open_orders}\n"
+        f"Past Trades: {past_trade_info}"
+    )
+    
     prompt = PROMPT_FOR_AI + "\n\n" + info_str
     user_prompt = """
 What should we do to make the most amount of profit based on the info provided?
