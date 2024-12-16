@@ -108,3 +108,29 @@ class LivePortfolio:
             'ai_reasoning': summary
         }
         self.trade_history.append(trade_record)
+
+    def get_trade_history(self):
+        """Get recent trade history"""
+        try:
+            formatted_trades = []
+            # Get trades for each symbol
+            for symbol in ['BTC/USD', 'ETH/USD', 'XRP/USD', 'SOL/USD', 'DOGE/USD', 
+                          'ADA/USD', 'AVAX/USD', 'LINK/USD', 'SHIB/USD', 'XLM/USD', 'XTZ/USD']:
+                trades = self.exchange.fetch_my_trades(symbol, limit=20)
+                for trade in trades:
+                    formatted_trades.append({
+                        'timestamp': trade['datetime'],
+                        'command': 'market_buy' if trade['side'] == 'buy' else 'market_sell',
+                        'symbol': trade['symbol'].split('/')[0],
+                        'amount': float(trade['cost']),  # USD amount
+                        'quantity': float(trade['amount']),  # Crypto amount
+                        'price': float(trade['price']),
+                        'success': True
+                    })
+            
+            # Sort by timestamp and return most recent 20
+            formatted_trades.sort(key=lambda x: x['timestamp'], reverse=True)
+            return formatted_trades[:20]
+        except Exception as e:
+            logging.error(f"Error fetching trade history: {e}")
+            return []
