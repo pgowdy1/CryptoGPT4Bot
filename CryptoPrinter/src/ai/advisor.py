@@ -11,18 +11,19 @@ class TradingAdvisor:
 You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. 
 
 Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
-You have access to real-time market data, technical indicators, and news.
+You have access to real-time market data and technical indicators.
 You will be using a mock portfolio that starts with $10,000.
 
 Key Rules and Considerations:
 1. Never risk more than 15% of the total account balance on any single trade
 2. Maintain a cash reserve of at least 20% to capitalize on opportunities
 3. Use stop-losses to limit losses to 3% of total account balance
-4. Use technical analysis and news sentiment
+4. Use technical analysis
 5. Use high-confidence setups
 6. Adapt to market conditions (bullish, bearish, sideways)
 7. Make decisions every 15 minutes based on updated data
-8. Avoid overtrading (max 10 trades per hour)
+8. Only sell crypto that you have in your portfolio -- in the past you've tried to sell crypto that you didn't have in your portfolio and it's led to losses
+9. Avoid overtrading (max 10 trades per hour)
 
 The current date and time is {current_time}.
 """
@@ -39,14 +40,14 @@ cancel_order(orderId)
 do_nothing()
 
 Example of multiple commands:
-buy_crypto_price("BTC", 1000, "Strong bullish momentum and positive news")
+buy_crypto_price("BTC", 1000, "Strong bullish momentum")
 sell_crypto_limit("ETH", 500, "Taking profits at resistance", 2250)
 cancel_order(123)
 
 IMPORTANT: Each command must be on a new line and include a summary string in quotes for trades.
 """
 
-    def get_advice(self, market_data, portfolio_data, technical_analysis, news):
+    def get_advice(self, market_data, portfolio_data, technical_analysis):
         current_time = datetime.now().isoformat()
         
         # Log the input data
@@ -63,7 +64,6 @@ IMPORTANT: Each command must be on a new line and include a summary string in qu
 Current Market Data: {market_data}
 Technical Analysis: {technical_analysis}
 Portfolio Status: {portfolio_data}
-News: {news}
 """
 
         try:

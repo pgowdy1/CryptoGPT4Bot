@@ -119,9 +119,6 @@ def main():
             technical_analysis = technical_analyzer.get_all_indicators(config.SYMBOLS)
             logger.debug(f"Technical analysis results: {technical_analysis}")
             
-            news = market_data.get_all_crypto_news(config.SYMBOLS)
-            logger.debug(f"Retrieved news items: {len(news)} articles")
-            
             # Get portfolio status
             portfolio_data = {
                 'balance': float(portfolio.get_balance()),
@@ -143,10 +140,9 @@ def main():
             for order in portfolio_data['open_orders']:
                 ai_logger.info(f"  {order['side'].upper()} {order['type']} - {order['quantity']} {order['id']} @ ${float(order['price']):.2f}")
             ai_logger.info(f"Input - Technical Analysis: {technical_analysis}")
-            ai_logger.info(f"Input - News Items: {news}")
             
             # Get AI advice
-            advice = advisor.get_advice(crypto_infos, portfolio_data, technical_analysis, news)
+            advice = advisor.get_advice(crypto_infos, portfolio_data, technical_analysis)
             
             # Log AI response and execution
             ai_logger.info(f"=== AI Response ===")
