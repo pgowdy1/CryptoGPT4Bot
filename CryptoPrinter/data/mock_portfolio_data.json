@@ -1,0 +1,16 @@
+{
+  "balance": 7225.0,
+  "positions": {
+    "XRP": {
+      "quantity": 618.6306816072849,
+      "average_price": 2.42471
+    },
+    "BTC": {
+      "quantity": 0.012356638761661275,
+      "average_price": 103183.4
+    }
+  },
+  "open_orders": [],
+  "trade_history": [],
+  "last_updated": "2024-12-15T11:07:47.151916"
+}
