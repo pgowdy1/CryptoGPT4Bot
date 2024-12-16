@@ -18,14 +18,20 @@ class LivePortfolio:
         try:
             balance = self.exchange.fetch_balance()
             positions = []
-            for symbol in balance:
-                if symbol != 'USD' and balance[symbol]['free'] > 0:
-                    ticker = self.exchange.fetch_ticker(f'{symbol}/USD')
-                    positions.append({
-                        'symbol': symbol,
-                        'quantity': float(balance[symbol]['free']),
-                        'dollar_amount': float(balance[symbol]['free']) * ticker['last']
-                    })
+            
+            for symbol, balance_data in balance['total'].items():
+                # Skip USD and zero balances
+                if symbol != 'ZUSD' and float(balance_data) > 0:
+                    try:
+                        ticker = self.exchange.fetch_ticker(f'{symbol}/USD')
+                        positions.append({
+                            'symbol': symbol,
+                            'quantity': float(balance_data),
+                            'dollar_amount': float(balance_data) * ticker['last']
+                        })
+                    except Exception as e:
+                        logging.error(f"Error fetching ticker for {symbol}: {e}")
+                        continue
             return positions
         except Exception as e:
             logging.error(f"Error fetching positions: {e}")

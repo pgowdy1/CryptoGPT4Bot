@@ -22,6 +22,7 @@ Key Rules and Considerations:
 6. Make decisions every 30 minutes based on updated data
 7. Only sell crypto that you have in your portfolio -- in the past you've tried to sell crypto that you didn't have in your portfolio and it's led to losses
 8. Avoid overtrading (max 10 trades per hour)
+9. We have a small portfolio, but we still need to make money 
 
 The current date and time is {current_time}.
 """
