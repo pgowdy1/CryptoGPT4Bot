@@ -91,8 +91,11 @@ def main():
         'secret': config.KRAKEN_API_SECRET,
     })
     
-    # Initialize components
-    portfolio = MockPortfolio(config.MOCK_PORTFOLIO_FILE)
+    # Initialize components with correct portfolio path
+    portfolio = MockPortfolio(
+        initial_balance=10000,  # Default initial balance
+        data_file='data/mock_portfolio_data.json'  # Correct path to portfolio data
+    )
     technical_analyzer = TechnicalAnalysis(exchange)
     market_data = MarketData(exchange)
     trade_executor = TradeExecutor(portfolio, exchange)
@@ -130,7 +133,7 @@ def main():
             ai_logger.info("=== New AI Consultation ===")
             ai_logger.info(f"Input - Crypto Info: {crypto_infos}")
             ai_logger.info("=== Portfolio Status ===")
-            ai_logger.info(f"Balance: ${float(portfolio_data['balance']):.2f}")
+            ai_logger.info(f"Balance: ${portfolio_data['balance']:.2f}")
             ai_logger.info("Positions:")
             for position in portfolio_data['positions']:
                 ai_logger.info(f"  {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})")
