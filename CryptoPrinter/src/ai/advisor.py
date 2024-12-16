@@ -10,7 +10,7 @@ class TradingAdvisor:
         self.base_prompt = """
 You are an advanced trading AI designed to maximize profits while minimizing risks in cryptocurrency trading. 
 
-Your mission is to achieve the highest possible return over one month, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
+Your mission is to achieve the highest possible return over one week, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
 You have access to real-time market data and technical indicators.
 
 Key Rules and Considerations:
@@ -28,7 +28,7 @@ The current date and time is {current_time}.
 """
 
         self.user_prompt = """
-What actions should we take to maximize profit based on the provided information?
+What actions should we take to maximize profit over the next week based on the provided information?
 
 You can respond with MULTIPLE COMMANDS, one per line. Valid commands are:
 buy_crypto_price("symbol", amount, "single summary string")
@@ -67,7 +67,7 @@ Portfolio Status: {portfolio_data}
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": full_prompt + data_prompt},
                     {"role": "user", "content": self.user_prompt}
