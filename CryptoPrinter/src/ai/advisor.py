@@ -55,7 +55,7 @@ IMPORTANT: The summary must be a single string in quotes, not multiple comma-sep
 
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": full_prompt + data_prompt},
                     {"role": "user", "content": user_prompt}

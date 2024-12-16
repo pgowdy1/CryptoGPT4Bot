@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from datetime import datetime
 
@@ -37,17 +38,22 @@ class MockPortfolio:
         except Exception as e:
             print(f"Error saving portfolio data: {e}")
             
-    def record_trade(self, trade_type, symbol, amount, quantity, price, summary):
-        trade = {
-            'timestamp': datetime.now().isoformat(),
-            'type': trade_type,
-            'symbol': symbol,
-            'amount': amount,
-            'quantity': quantity,
-            'price': price,
-            'ai_reasoning': summary  # Add AI's reasoning
-        }
-        self.trade_history.append(trade)
+    def record_trades(self, trades):
+        """Record multiple trades with their results"""
+        for trade in trades:
+            trade_record = {
+                'timestamp': trade['timestamp'],
+                'command': trade['command'],
+                'success': trade['success'],
+                'type': trade.get('type'),
+                'symbol': trade.get('symbol'),
+                'amount': trade.get('amount'),
+                'quantity': trade.get('quantity'),
+                'price': trade.get('price'),
+                'ai_reasoning': trade.get('summary'),
+                'error': trade.get('error')
+            }
+            self.trade_history.append(trade_record)
         self.save_portfolio()
         
     def get_balance(self):
@@ -66,8 +72,12 @@ class MockPortfolio:
 
     def create_market_buy_order(self, symbol, amount, price):
         try:
+            # Convert amount to float
+            amount = float(amount)
+            price = float(price)
+            
             if amount > self.balance:
-                raise Exception("Insufficient funds")
+                raise Exception(f"Insufficient funds: have ${self.balance}, need ${amount}")
                 
             quantity = amount / price
             if symbol not in self.positions:
@@ -98,12 +108,16 @@ class MockPortfolio:
         
     def create_market_sell_order(self, symbol, amount, price):
         try:
+            # Convert amount to float
+            amount = float(amount)
+            price = float(price)
+            
             if symbol not in self.positions or self.positions[symbol]['quantity'] <= 0:
                 raise Exception("No position to sell")
                 
             quantity = amount / price
             if quantity > self.positions[symbol]['quantity']:
-                raise Exception("Insufficient crypto quantity")
+                raise Exception(f"Insufficient crypto quantity: have {self.positions[symbol]['quantity']}, need {quantity}")
                 
             self.positions[symbol]['quantity'] -= quantity
             self.balance += amount
@@ -118,7 +132,7 @@ class MockPortfolio:
                 'price': price
             }
         except Exception as e:
-            print(f"Error executing market sell order: {e}")
+            logging.error(f"Error executing market sell order: {e}")
             return None
         
     def create_limit_buy_order(self, symbol, amount, limit_price):
