@@ -3,6 +3,7 @@ import ccxt
 import time
 from openai import OpenAI
 import re
+from datetime import datetime
 
 from src.utils.config import Config
 from src.utils.logger import setup_logger
@@ -77,6 +78,13 @@ def main():
     config = Config()
     logger = setup_logger()
     
+    # Add a separate logger for AI interactions
+    ai_logger = logging.getLogger('ai_interactions')
+    ai_handler = logging.FileHandler('logs/ai_interactions.log')
+    ai_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+    ai_logger.addHandler(ai_handler)
+    ai_logger.setLevel(logging.DEBUG)
+    
     # Initialize exchange
     exchange = ccxt.kraken({
         'apiKey': config.KRAKEN_API_KEY,
@@ -96,10 +104,18 @@ def main():
         try:
             start_time = time.time()
             
+            # Log the start of a new trading cycle
+            logger.info("Starting new trading cycle")
+            
             # Gather all necessary data
             crypto_infos = market_data.get_crypto_infos(config.SYMBOLS)
+            logger.debug(f"Gathered crypto info: {crypto_infos}")
+            
             technical_analysis = technical_analyzer.get_all_indicators(config.SYMBOLS)
+            logger.debug(f"Technical analysis results: {technical_analysis}")
+            
             news = market_data.get_all_crypto_news(config.SYMBOLS)
+            logger.debug(f"Retrieved news items: {len(news)} articles")
             
             # Get portfolio status
             portfolio_data = {
@@ -107,22 +123,45 @@ def main():
                 'positions': portfolio.get_positions(),
                 'open_orders': portfolio.get_open_orders()
             }
+            logger.debug(f"Current portfolio status: {portfolio_data}")
+            
+            # Log AI input data
+            ai_logger.info("=== New AI Consultation ===")
+            ai_logger.info(f"Input - Crypto Info: {crypto_infos}")
+            ai_logger.info(f"Input - Portfolio Data: {portfolio_data}")
+            ai_logger.info(f"Input - Technical Analysis: {technical_analysis}")
+            ai_logger.info(f"Input - News Items: {news}")
             
             # Get AI advice
             advice = advisor.get_advice(crypto_infos, portfolio_data, technical_analysis, news)
             
-            if advice:
-                parse_and_execute_response(advice, trade_executor)
+            # Log AI response
+            ai_logger.info(f"AI Response:\n{advice}")
             
-            # Calculate wait time
+            if advice:
+                # Log the execution attempt
+                logger.info(f"Attempting to execute AI advice: {advice}")
+                execution_result = parse_and_execute_response(advice, trade_executor)
+                ai_logger.info(f"Execution result: {'Success' if execution_result else 'Failed'}")
+            
+            # Calculate and log wait time
             elapsed_time = time.time() - start_time
             wait_time = max(0, config.TRADE_INTERVAL - elapsed_time)
-            logger.info(f"Waiting {wait_time:.2f} seconds until next trade check")
+            logger.info(f"Cycle completed in {elapsed_time:.2f}s. Waiting {wait_time:.2f}s until next cycle")
+            
+            # Log cycle summary
+            ai_logger.info(f"=== Cycle Summary ===")
+            ai_logger.info(f"Cycle duration: {elapsed_time:.2f}s")
+            ai_logger.info(f"Portfolio after cycle: {portfolio.get_balance()}")
+            ai_logger.info("=" * 50 + "\n")
+            
             time.sleep(wait_time)
             
         except Exception as e:
-            logger.error(f"Error in main loop: {e}")
-            time.sleep(60)  # Wait a minute before retrying on error
+            error_msg = f"Error in main loop: {str(e)}"
+            logger.error(error_msg)
+            ai_logger.error(error_msg)
+            time.sleep(60)
 
 if __name__ == "__main__":
     main()
