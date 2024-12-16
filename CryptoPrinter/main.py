@@ -12,6 +12,7 @@ from src.trading.technical_analysis import TechnicalAnalysis
 from src.trading.trade_executor import TradeExecutor
 from src.data.market_data import MarketData
 from src.ai.advisor import TradingAdvisor
+from src.trading.live_portfolio import LivePortfolio
 
 def parse_and_execute_response(response, trade_executor):
     lines = response.split('\n')
@@ -93,11 +94,16 @@ def main():
         'secret': config.KRAKEN_API_SECRET,
     })
     
-    # Initialize components with correct portfolio path
-    portfolio = MockPortfolio(
-        initial_balance=10000,  # Default initial balance
-        data_file='data/mock_portfolio_data.json'  # Correct path to portfolio data
-    )
+    # Initialize portfolio based on trading mode
+    if config.TRADING_MODE == 'live':
+        logger.info("Initializing LIVE trading mode")
+        portfolio = LivePortfolio(exchange)
+    else:
+        logger.info("Initializing MOCK trading mode")
+        portfolio = MockPortfolio(
+            initial_balance=config.INITIAL_MOCK_BALANCE,
+            data_file='data/mock_portfolio_data.json'
+        )
     technical_analyzer = TechnicalAnalysis(exchange)
     market_data = MarketData(exchange)
     trade_executor = TradeExecutor(portfolio, exchange)
