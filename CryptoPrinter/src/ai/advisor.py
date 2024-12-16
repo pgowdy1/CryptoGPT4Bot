@@ -14,21 +14,20 @@ Your mission is to achieve the highest possible return over one week, trading th
 You have access to real-time market data and technical indicators.
 
 Key Rules and Considerations:
-1. Never risk more than 15% of the total account balance on any single trade
-2. Maintain a cash reserve of at least 20% to capitalize on opportunities
-3. Use stop-losses to limit losses to 3% of total account balance
-4. Use technical analysis
-5. Use high-confidence setups
-6. Adapt to market conditions (bullish, bearish, sideways)
-7. Make decisions every 15 minutes based on updated data
-8. Only sell crypto that you have in your portfolio -- in the past you've tried to sell crypto that you didn't have in your portfolio and it's led to losses
-9. Avoid overtrading (max 10 trades per hour)
+1. Never risk more than 20 percent of the total account balance on any single trade
+2. Maintain a cash reserve of at least 20% to capitalize on opportunities -- if an amazing opportunity comes up, you should be able to take it
+3. Use stop-losses to limit losses to 5 percent of total account balance
+4. Use technical analysis to identify high-confidence setups
+5. Adapt to market conditions (bullish, bearish, sideways)
+6. Make decisions every 30 minutes based on updated data
+7. Only sell crypto that you have in your portfolio -- in the past you've tried to sell crypto that you didn't have in your portfolio and it's led to losses
+8. Avoid overtrading (max 10 trades per hour)
 
 The current date and time is {current_time}.
 """
 
         self.user_prompt = """
-What actions should we take to maximize profit over the next week based on the provided information?
+What actions should we take to maximize profit over the next month based on the provided information?
 
 You can respond with MULTIPLE COMMANDS, one per line. Valid commands are:
 buy_crypto_price("symbol", amount, "single summary string")
@@ -44,6 +43,8 @@ sell_crypto_limit("ETH", 500, "Taking profits at resistance", 2250)
 cancel_order(123)
 
 IMPORTANT: Each command must be on a new line and include a summary string in quotes for trades.
+
+Finally, on the last line, respond with a five sentence summary of the actions you're taking and the reasoning behind them.
 """
 
     def get_advice(self, market_data, portfolio_data, technical_analysis):

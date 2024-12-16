@@ -14,16 +14,29 @@ from src.data.market_data import MarketData
 from src.ai.advisor import TradingAdvisor
 from src.trading.live_portfolio import LivePortfolio
 
-def parse_and_execute_response(response, trade_executor):
+def parse_and_execute_response(response, trade_executor, ai_logger):
     lines = response.split('\n')
     commands_executed = 0
     success = False
+    summary = ""
+
+    # Process all lines except the last few (which should be the summary)
+    command_lines = []
+    summary_lines = []
+    in_summary = False
 
     for line in lines:
-        # Skip empty lines and lines that don't contain commands
-        if not line.strip() or not any(cmd in line.lower() for cmd in ["buy_crypto_price", "sell_crypto_price", "buy_crypto_limit", "sell_crypto_limit", "cancel_order", "do_nothing"]):
+        if not line.strip():
             continue
+        
+        # Check if we've hit the summary section
+        if any(cmd in line.lower() for cmd in ["buy_crypto_price", "sell_crypto_price", "buy_crypto_limit", "sell_crypto_limit", "cancel_order", "do_nothing"]):
+            command_lines.append(line)
+        else:
+            summary_lines.append(line)
 
+    # Process commands
+    for line in command_lines:
         match = re.match(r'.*?(buy_crypto_price|sell_crypto_price|buy_crypto_limit|sell_crypto_limit|cancel_order|do_nothing)\((.*)\)', line)
         
         if not match:
@@ -73,8 +86,15 @@ def parse_and_execute_response(response, trade_executor):
             except Exception as e:
                 logging.error(f"Error executing command {command}: {e}")
 
+    # Log the AI's summary
+    if summary_lines:
+        summary = ' '.join(summary_lines)
+        ai_logger.info("=== AI Trading Summary ===")
+        ai_logger.info(summary)
+        ai_logger.info("=" * 50)
+
     logging.info(f"Executed {commands_executed} commands successfully")
-    return success
+    return success, summary
 
 def main():
     # Initialize configuration and logging
@@ -156,16 +176,12 @@ def main():
             
             if advice:
                 # Split advice into individual commands
-                commands = [line.strip() for line in advice.split('\n') if line.strip()]
-                ai_logger.info(f"Number of commands detected: {len(commands)}")
+                ai_logger.info(f"=== AI Response ===")
+                ai_logger.info(f"Full Response:\n{advice}")
                 
-                for i, command in enumerate(commands, 1):
-                    ai_logger.info(f"Processing command {i}/{len(commands)}: {command}")
-                    try:
-                        execution_result = parse_and_execute_response(command, trade_executor)
-                        ai_logger.info(f"Command {i} execution result: {'Success' if execution_result else 'Failed'}")
-                    except Exception as e:
-                        ai_logger.error(f"Error executing command {i}: {e}")
+                success, ai_summary = parse_and_execute_response(advice, trade_executor, ai_logger)
+                ai_logger.info(f"Execution success: {success}")
+                ai_logger.info(f"AI Summary: {ai_summary}")
                 
                 # Log updated portfolio status after all commands
                 updated_portfolio = {

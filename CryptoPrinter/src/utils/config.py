@@ -12,7 +12,7 @@ class Config:
         self.NEWSAPI_KEY = os.getenv('NEWSAPI_KEY')
         
         # Trading Parameters
-        self.TRADE_INTERVAL = int(os.getenv('TRADE_INTERVAL', 900))
+        self.TRADE_INTERVAL = int(os.getenv('TRADE_INTERVAL', 1800))
         
         # Trading Symbols
         self.SYMBOLS = ["BTC", "ETH", "XRP", "SOL", "DOGE", "ADA", "AVAX", "LINK", "SHIB", "XLM", "XTZ"]
