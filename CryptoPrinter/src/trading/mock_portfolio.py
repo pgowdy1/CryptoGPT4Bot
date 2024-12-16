@@ -57,7 +57,7 @@ class MockPortfolio:
         self.save_portfolio()
         
     def get_balance(self):
-        return self.balance
+        return float(self.balance)
         
     def get_positions(self):
         return [

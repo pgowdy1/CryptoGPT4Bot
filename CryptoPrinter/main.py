@@ -119,16 +119,24 @@ def main():
             
             # Get portfolio status
             portfolio_data = {
-                'balance': portfolio.get_balance(),
+                'balance': float(portfolio.get_balance()),
                 'positions': portfolio.get_positions(),
-                'open_orders': portfolio.get_open_orders()
+                'open_orders': portfolio.get_open_orders(),
+                'trade_history': portfolio.get_trade_history()
             }
             logger.debug(f"Current portfolio status: {portfolio_data}")
             
             # Log AI input data
             ai_logger.info("=== New AI Consultation ===")
             ai_logger.info(f"Input - Crypto Info: {crypto_infos}")
-            ai_logger.info(f"Input - Portfolio Data: {portfolio_data}")
+            ai_logger.info("=== Portfolio Status ===")
+            ai_logger.info(f"Balance: ${float(portfolio_data['balance']):.2f}")
+            ai_logger.info("Positions:")
+            for position in portfolio_data['positions']:
+                ai_logger.info(f"  {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})")
+            ai_logger.info("Open Orders:")
+            for order in portfolio_data['open_orders']:
+                ai_logger.info(f"  {order['side'].upper()} {order['type']} - {order['quantity']} {order['id']} @ ${float(order['price']):.2f}")
             ai_logger.info(f"Input - Technical Analysis: {technical_analysis}")
             ai_logger.info(f"Input - News Items: {news}")
             

@@ -30,6 +30,14 @@ The current date and time is {current_time}.
     def get_advice(self, market_data, portfolio_data, technical_analysis, news):
         current_time = datetime.now().isoformat()
         
+        # Log the input data
+        logging.info("=== AI Trading Analysis Start ===")
+        logging.info(f"Time: {current_time}")
+        logging.info(f"Portfolio Balance: ${portfolio_data['balance']:.2f}")
+        logging.info("Current Positions:")
+        for position in portfolio_data['positions']:
+            logging.info(f"  {position['symbol']}: {position['quantity']:.8f} units")
+        
         # Construct the full prompt with current data
         full_prompt = self.base_prompt.format(current_time=current_time)
         data_prompt = f"""
@@ -62,7 +70,15 @@ IMPORTANT: The summary must be a single string in quotes, not multiple comma-sep
                 ],
                 temperature=0.2,
             )
-            return response.choices[0].message.content
+            
+            ai_response = response.choices[0].message.content
+            
+            # Log the AI's response
+            logging.info("=== AI Decision ===")
+            logging.info(f"Full Response:\n{ai_response}")
+            logging.info("==================\n")
+            
+            return ai_response
         except Exception as e:
             logging.error(f"Error getting AI advice: {e}")
             return None
