@@ -38,22 +38,20 @@ class MockPortfolio:
         except Exception as e:
             print(f"Error saving portfolio data: {e}")
             
-    def record_trades(self, trades):
-        """Record multiple trades with their results"""
-        for trade in trades:
-            trade_record = {
-                'timestamp': trade['timestamp'],
-                'command': trade['command'],
-                'success': trade['success'],
-                'type': trade.get('type'),
-                'symbol': trade.get('symbol'),
-                'amount': trade.get('amount'),
-                'quantity': trade.get('quantity'),
-                'price': trade.get('price'),
-                'ai_reasoning': trade.get('summary'),
-                'error': trade.get('error')
-            }
-            self.trade_history.append(trade_record)
+    def record_trade(self, command, symbol, amount, quantity, price, summary):
+        """Record a single trade with its result"""
+        trade_record = {
+            'timestamp': datetime.now().isoformat(),
+            'command': command,
+            'success': True,
+            'type': 'market' if 'market' in command else 'limit',
+            'symbol': symbol,
+            'amount': amount,
+            'quantity': quantity,
+            'price': price,
+            'ai_reasoning': summary
+        }
+        self.trade_history.append(trade_record)
         self.save_portfolio()
         
     def get_balance(self):

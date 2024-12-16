@@ -1,16 +1,58 @@
 {
-  "balance": 7225.0,
+  "balance": 8794.0,
   "positions": {
-    "XRP": {
-      "quantity": 618.6306816072849,
-      "average_price": 2.42471
+    "AVAX": {
+      "quantity": 3.9242432861575427,
+      "average_price": 49.95000000000001
+    },
+    "XLM": {
+      "quantity": 2382.6883395998034,
+      "average_price": 0.41969400000000007
     },
     "BTC": {
-      "quantity": 0.012356638761661275,
-      "average_price": 103183.4
+      "quantity": 7.635358198513587e-05,
+      "average_price": 104775.7
+    },
+    "ETH": {
+      "quantity": 0.0005050887693512135,
+      "average_price": 3959.7
     }
   },
-  "open_orders": [],
-  "trade_history": [],
-  "last_updated": "2024-12-15T11:07:47.151916"
+  "open_orders": [
+    {
+      "id": 0,
+      "symbol": "AVAX",
+      "type": "limit",
+      "side": "sell",
+      "amount": 3.9242432861575427,
+      "price": 52.0,
+      "status": "open",
+      "created_at": "2024-12-15T22:32:13.582508"
+    }
+  ],
+  "trade_history": [
+    {
+      "timestamp": "2024-12-15T22:32:12.567210",
+      "command": "buy_market",
+      "success": true,
+      "type": "market",
+      "symbol": "BTC",
+      "amount": 8.0,
+      "quantity": 7.635358198513587e-05,
+      "price": 104775.7,
+      "ai_reasoning": "Bullish trend and positive momentum"
+    },
+    {
+      "timestamp": "2024-12-15T22:32:13.580504",
+      "command": "buy_market",
+      "success": true,
+      "type": "market",
+      "symbol": "ETH",
+      "amount": 2.0,
+      "quantity": 0.0005050887693512135,
+      "price": 3959.7,
+      "ai_reasoning": "Potential for price increase"
+    }
+  ],
+  "last_updated": "2024-12-15T22:32:13.582723"
 }

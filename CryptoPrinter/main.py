@@ -15,63 +15,65 @@ from src.ai.advisor import TradingAdvisor
 
 def parse_and_execute_response(response, trade_executor):
     lines = response.split('\n')
-    command_line = None
-    for line in reversed(lines):
-        if any(cmd in line.lower() for cmd in ["buy_crypto_price", "sell_crypto_price", "buy_crypto_limit", "sell_crypto_limit", "cancel_order", "do_nothing"]):
-            command_line = line
-            break
-    
-    if not command_line:
-        logging.error(f"No valid command found in response: {response}")
-        return False
+    commands_executed = 0
+    success = False
 
-    match = re.match(r'.*?(buy_crypto_price|sell_crypto_price|buy_crypto_limit|sell_crypto_limit|cancel_order|do_nothing)\((.*)\)', command_line)
-    
-    if not match:
-        logging.error(f"Invalid response format: {command_line}")
-        return False
+    for line in lines:
+        # Skip empty lines and lines that don't contain commands
+        if not line.strip() or not any(cmd in line.lower() for cmd in ["buy_crypto_price", "sell_crypto_price", "buy_crypto_limit", "sell_crypto_limit", "cancel_order", "do_nothing"]):
+            continue
 
-    command = match.group(1)
-    args_str = match.group(2)
-    args = []
-    current_arg = ''
-    in_quotes = False
-    quote_char = None
-    
-    for char in args_str:
-        if char in ['"', "'"]:
-            if not in_quotes:
-                in_quotes = True
-                quote_char = char
-            elif char == quote_char:
-                in_quotes = False
-            current_arg += char
-        elif char == ',' and not in_quotes:
+        match = re.match(r'.*?(buy_crypto_price|sell_crypto_price|buy_crypto_limit|sell_crypto_limit|cancel_order|do_nothing)\((.*)\)', line)
+        
+        if not match:
+            logging.error(f"Invalid response format in line: {line}")
+            continue
+
+        command = match.group(1)
+        args_str = match.group(2)
+        args = []
+        current_arg = ''
+        in_quotes = False
+        quote_char = None
+        
+        for char in args_str:
+            if char in ['"', "'"]:
+                if not in_quotes:
+                    in_quotes = True
+                    quote_char = char
+                elif char == quote_char:
+                    in_quotes = False
+                current_arg += char
+            elif char == ',' and not in_quotes:
+                args.append(current_arg.strip().strip('"\''))
+                current_arg = ''
+            else:
+                current_arg += char
+        
+        if current_arg:
             args.append(current_arg.strip().strip('"\''))
-            current_arg = ''
-        else:
-            current_arg += char
-    
-    if current_arg:
-        args.append(current_arg.strip().strip('"\''))
 
-    command_map = {
-        "buy_crypto_price": trade_executor.execute_buy_market,
-        "buy_crypto_limit": trade_executor.execute_buy_limit,
-        "sell_crypto_price": trade_executor.execute_sell_market,
-        "sell_crypto_limit": trade_executor.execute_sell_limit,
-        "cancel_order": trade_executor.cancel_order,
-        "do_nothing": lambda: None
-    }
+        command_map = {
+            "buy_crypto_price": trade_executor.execute_buy_market,
+            "buy_crypto_limit": trade_executor.execute_buy_limit,
+            "sell_crypto_price": trade_executor.execute_sell_market,
+            "sell_crypto_limit": trade_executor.execute_sell_limit,
+            "cancel_order": trade_executor.cancel_order,
+            "do_nothing": lambda: None
+        }
 
-    function_to_execute = command_map.get(command)
-    if function_to_execute:
-        logging.info(f"Executing command {command} with args {args}")
-        function_to_execute(*args)
-        return True
-    else:
-        logging.error(f"Invalid command: {command}")
-        return False
+        function_to_execute = command_map.get(command)
+        if function_to_execute:
+            logging.info(f"Executing command {command} with args {args}")
+            try:
+                if function_to_execute(*args):
+                    commands_executed += 1
+                    success = True
+            except Exception as e:
+                logging.error(f"Error executing command {command}: {e}")
+
+    logging.info(f"Executed {commands_executed} commands successfully")
+    return success
 
 def main():
     # Initialize configuration and logging
@@ -146,14 +148,37 @@ def main():
             # Get AI advice
             advice = advisor.get_advice(crypto_infos, portfolio_data, technical_analysis, news)
             
-            # Log AI response
-            ai_logger.info(f"AI Response:\n{advice}")
+            # Log AI response and execution
+            ai_logger.info(f"=== AI Response ===")
+            ai_logger.info(f"Full Response:\n{advice}")
             
             if advice:
-                # Log the execution attempt
-                logger.info(f"Attempting to execute AI advice: {advice}")
-                execution_result = parse_and_execute_response(advice, trade_executor)
-                ai_logger.info(f"Execution result: {'Success' if execution_result else 'Failed'}")
+                # Split advice into individual commands
+                commands = [line.strip() for line in advice.split('\n') if line.strip()]
+                ai_logger.info(f"Number of commands detected: {len(commands)}")
+                
+                for i, command in enumerate(commands, 1):
+                    ai_logger.info(f"Processing command {i}/{len(commands)}: {command}")
+                    try:
+                        execution_result = parse_and_execute_response(command, trade_executor)
+                        ai_logger.info(f"Command {i} execution result: {'Success' if execution_result else 'Failed'}")
+                    except Exception as e:
+                        ai_logger.error(f"Error executing command {i}: {e}")
+                
+                # Log updated portfolio status after all commands
+                updated_portfolio = {
+                    'balance': float(portfolio.get_balance()),
+                    'positions': portfolio.get_positions(),
+                    'open_orders': portfolio.get_open_orders()
+                }
+                ai_logger.info("=== Portfolio After Execution ===")
+                ai_logger.info(f"Balance: ${updated_portfolio['balance']:.2f}")
+                ai_logger.info("Positions:")
+                for position in updated_portfolio['positions']:
+                    ai_logger.info(f"  {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})")
+                ai_logger.info("Open Orders:")
+                for order in updated_portfolio['open_orders']:
+                    ai_logger.info(f"  {order['side'].upper()} {order['type']} - {order['quantity']} {order['id']} @ ${float(order['price']):.2f}")
             
             # Calculate and log wait time
             elapsed_time = time.time() - start_time

@@ -19,12 +19,31 @@ Key Rules and Considerations:
 2. Maintain a cash reserve of at least 20% to capitalize on opportunities
 3. Use stop-losses to limit losses to 3% of total account balance
 4. Use technical analysis and news sentiment
-5. Trade only with high-confidence setups
+5. Use high-confidence setups
 6. Adapt to market conditions (bullish, bearish, sideways)
 7. Make decisions every 15 minutes based on updated data
 8. Avoid overtrading (max 10 trades per hour)
 
 The current date and time is {current_time}.
+"""
+
+        self.user_prompt = """
+What actions should we take to maximize profit based on the provided information?
+
+You can respond with MULTIPLE COMMANDS, one per line. Valid commands are:
+buy_crypto_price("symbol", amount, "single summary string")
+buy_crypto_limit("symbol", amount, "single summary string", limit)
+sell_crypto_price("symbol", amount, "single summary string")
+sell_crypto_limit("symbol", amount, "single summary string", limit)
+cancel_order(orderId)
+do_nothing()
+
+Example of multiple commands:
+buy_crypto_price("BTC", 1000, "Strong bullish momentum and positive news")
+sell_crypto_limit("ETH", 500, "Taking profits at resistance", 2250)
+cancel_order(123)
+
+IMPORTANT: Each command must be on a new line and include a summary string in quotes for trades.
 """
 
     def get_advice(self, market_data, portfolio_data, technical_analysis, news):
@@ -47,26 +66,12 @@ Portfolio Status: {portfolio_data}
 News: {news}
 """
 
-        user_prompt = """
-What should we do to make the most amount of profit based on the info provided?
-
-RESPOND WITH ONLY ONE OF THESE COMMANDS ON THE LAST LINE OF YOUR RESPONSE:
-buy_crypto_price("symbol", amount, "single summary string")
-buy_crypto_limit("symbol", amount, "single summary string", limit)
-sell_crypto_price("symbol", amount, "single summary string")
-sell_crypto_limit("symbol", amount, "single summary string", limit)
-cancel_order(orderId)
-do_nothing()
-
-IMPORTANT: The summary must be a single string in quotes, not multiple comma-separated strings.
-"""
-
         try:
             response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
                     {"role": "system", "content": full_prompt + data_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": self.user_prompt}
                 ],
                 temperature=0.2,
             )
