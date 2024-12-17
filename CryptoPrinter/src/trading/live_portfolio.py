@@ -140,3 +140,19 @@ class LivePortfolio:
         except Exception as e:
             logging.error(f"Error fetching trade history: {e}")
             return []
+
+    def get_total_portfolio_value(self):
+        """Calculate total portfolio value including cash and all crypto positions"""
+        try:
+            # Get cash balance
+            total_value = self.get_balance()
+            
+            # Add value of all crypto positions
+            positions = self.get_positions()
+            for position in positions:
+                total_value += float(position['dollar_amount'])
+            
+            return float(total_value)
+        except Exception as e:
+            logging.error(f"Error calculating total portfolio value: {e}")
+            return 0.0

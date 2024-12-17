@@ -150,7 +150,8 @@ def main():
                 'balance': float(portfolio.get_balance()),
                 'positions': portfolio.get_positions(),
                 'open_orders': portfolio.get_open_orders(),
-                'trade_history': portfolio.get_trade_history()
+                'trade_history': portfolio.get_trade_history(),
+                'total_value': float(portfolio.get_total_portfolio_value())
             }
             logger.debug(f"Current portfolio status: {portfolio_data}")
             
@@ -158,7 +159,8 @@ def main():
             ai_logger.info("=== New AI Consultation ===")
             ai_logger.info(f"Input - Crypto Info: {crypto_infos}")
             ai_logger.info("=== Portfolio Status ===")
-            ai_logger.info(f"Balance: ${portfolio_data['balance']:.2f}")
+            ai_logger.info(f"Cash Balance: ${portfolio_data['balance']:.2f}")
+            ai_logger.info(f"Total Portfolio Value: ${portfolio_data['total_value']:.2f}")
             ai_logger.info("Positions:")
             for position in portfolio_data['positions']:
                 ai_logger.info(f"  {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})")

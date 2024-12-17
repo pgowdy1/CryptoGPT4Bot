@@ -13,7 +13,8 @@ You are an advanced trading AI designed to maximize profits while minimizing ris
 Your mission is to achieve the highest possible return over one week, trading the following cryptocurrencies: BTC, ETH, XRP, SOL, DOGE, ADA, AVAX, LINK, SHIB, XLM, and XTZ. 
 You have access to real-time market data and technical indicators.
 
-CURRENT PORTFOLIO LIMITS:
+CURRENT PORTFOLIO STATUS:
+Total Portfolio Value: ${total_value:.2f}
 Cash Available: ${balance:.2f}
 Current Holdings:
 {holdings}
@@ -62,7 +63,7 @@ Finally, on the last line, respond with a five sentence summary of the actions y
     def get_advice(self, market_data, portfolio_data, technical_analysis):
         current_time = datetime.now().isoformat()
         
-        # Initialize holdings_str before using it
+        # Format holdings for clear display
         holdings_str = ""
         
         # Log the input data
@@ -80,6 +81,7 @@ Finally, on the last line, respond with a five sentence summary of the actions y
         full_prompt = self.base_prompt.format(
             current_time=current_time,
             balance=portfolio_data['balance'],
+            total_value=portfolio_data['total_value'],
             holdings=holdings_str
         )
         data_prompt = f"""
