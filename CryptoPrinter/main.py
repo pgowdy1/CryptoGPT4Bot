@@ -192,7 +192,7 @@ def main():
                     'open_orders': portfolio.get_open_orders()
                 }
                 ai_logger.info("=== Portfolio After Execution ===")
-                ai_logger.info(f"Balance: ${updated_portfolio['balance']:.2f}")
+                ai_logger.info(f"Cash Balance: ${updated_portfolio['balance']:.2f}")
                 ai_logger.info("Positions:")
                 for position in updated_portfolio['positions']:
                     ai_logger.info(f"  {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})")
@@ -208,7 +208,7 @@ def main():
             # Log cycle summary
             ai_logger.info(f"=== Cycle Summary ===")
             ai_logger.info(f"Cycle duration: {elapsed_time:.2f}s")
-            ai_logger.info(f"Portfolio after cycle: {portfolio.get_balance()}")
+            ai_logger.info(f"Total Portfolio Value after cycle: ${portfolio_data['total_value']:.2f}")
             ai_logger.info("=" * 50 + "\n")
             
             time.sleep(wait_time)
