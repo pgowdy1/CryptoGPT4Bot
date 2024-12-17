@@ -38,17 +38,19 @@ EXAMPLES:
 What actions should we take to maximize profit over the next month based on the provided information?
 
 You can respond with MULTIPLE COMMANDS, one per line. Valid commands are:
-buy_crypto_price("symbol", amount, "single summary string")
-buy_crypto_limit("symbol", amount, "single summary string", limit)
-sell_crypto_price("symbol", amount, "single summary string")
-sell_crypto_limit("symbol", amount, "single summary string", limit)
+buy_crypto_price("symbol", units, "single summary string")
+buy_crypto_limit("symbol", units, "single summary string", limit)
+sell_crypto_price("symbol", units, "single summary string")
+sell_crypto_limit("symbol", units, "single summary string", limit)
 cancel_order(orderId)
 do_nothing()
 
 Example of multiple commands:
-buy_crypto_price("BTC", 1000, "Strong bullish momentum")
-sell_crypto_limit("ETH", 500, "Taking profits at resistance", 2250)
+buy_crypto_price("BTC", 0.0003, "Strong bullish momentum")
+sell_crypto_limit("ETH", 1.2, "Taking profits at resistance", 2250)
 cancel_order(123)
+
+So in this case, we're buying 0.0003 BTC at the current price, and selling 1.2 ETH at 2250.
 
 IMPORTANT: Each command must be on a new line and include a summary string in quotes for trades.
 
