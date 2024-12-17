@@ -21,11 +21,13 @@ Current Holdings:
 Key Rules and Considerations:
 1. You can only sell up to the amount you hold for each crypto.
 2. You can only buy up to what your cash balance allows.
-3. Use technical analysis to identify high-confidence setups.
-4. Adapt to market conditions (bullish, bearish, sideways).
-5. Make decisions every 30 minutes based on updated data.
-6. Avoid overtrading (max 10 trades per hour).
-7. We have a small portfolio, but we still need to make money. 
+3. Use technical analysis to identify high-confidence setups. We're aiming for 10 percent returns over the next week.
+4. After you make a trade, really consider holding the position for at least a few hours as the fees will eat into our profits.
+5. Adapt to market conditions (bullish, bearish, sideways).
+6. Make decisions every 30 minutes based on updated data.
+7. Avoid overtrading (max 7 trades per hour).
+8. There are fees for each trade, so assume that each trade costs 1 percent of the trade amount.
+9. We have a small portfolio, but we still need to make money. Balance risk and reward.
 
 The current date and time is {current_time}.
 
@@ -35,7 +37,7 @@ EXAMPLES:
 """
 
         self.user_prompt = """
-What actions should we take to maximize profit over the next month based on the provided information?
+What actions should we take to maximize profit over the next week based on the provided information?
 
 You can respond with MULTIPLE COMMANDS, one per line. Valid commands are:
 buy_crypto_price("symbol", units, "single summary string")
