@@ -19,6 +19,9 @@ Cash Available: ${balance:.2f}
 Current Holdings:
 {holdings}
 
+RECENT TRADE HISTORY:
+{trade_history}
+
 Key Rules and Considerations:
 1. You can only sell up to the amount you hold for each crypto.
 2. You can only buy up to what your cash balance allows.
@@ -63,8 +66,10 @@ Finally, on the last line, respond with a five sentence summary of the actions y
     def get_advice(self, market_data, portfolio_data, technical_analysis):
         current_time = datetime.now().isoformat()
         
-        # Format holdings for clear display
+        # Initialize strings and ensure total_value exists
         holdings_str = ""
+        trade_history_str = ""
+        total_value = portfolio_data.get('total_value', 0.0)
         
         # Log the input data
         logging.info("=== AI Trading Analysis Start ===")
@@ -76,13 +81,27 @@ Finally, on the last line, respond with a five sentence summary of the actions y
         for position in portfolio_data['positions']:
             holdings_str += f"- {position['symbol']}: {position['quantity']:.8f} (${float(position['dollar_amount']):.2f})\n"
             logging.info(f"  {position['symbol']}: {position['quantity']:.8f} units")
-        
+            
+        # Format trade history (last 10 trades)
+        if 'trade_history' in portfolio_data and portfolio_data['trade_history']:
+            trade_history_str = "Last 10 trades:\n"
+            for trade in portfolio_data['trade_history'][-10:]:
+                timestamp = datetime.fromisoformat(trade['timestamp']).strftime('%Y-%m-%d %H:%M:%S')
+                trade_history_str += (
+                    f"- {timestamp}: {trade['command']} {trade['symbol']} "
+                    f"Quantity: {trade['quantity']:.8f} @ ${trade['price']:.2f}\n"
+                    f"  Reasoning: {trade.get('ai_reasoning', 'No reasoning provided')}\n"
+                )
+        else:
+            trade_history_str = "No previous trades.\n"
+
         # Construct the full prompt with current data
         full_prompt = self.base_prompt.format(
             current_time=current_time,
             balance=portfolio_data['balance'],
-            total_value=portfolio_data['total_value'],
-            holdings=holdings_str
+            total_value=total_value,
+            holdings=holdings_str,
+            trade_history=trade_history_str
         )
         data_prompt = f"""
 Current Market Data: {market_data}
